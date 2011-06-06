@@ -1,8 +1,28 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2011, Red Hat Middleware LLC, and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
 package org.infinispan.query.clustered;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -10,10 +30,18 @@ import org.apache.lucene.search.Sort;
 import org.apache.lucene.util.PriorityQueue;
 import org.infinispan.Cache;
 import org.infinispan.query.impl.AbstractIterator;
-import org.infinispan.remoting.rpc.RpcManager;
 import org.infinispan.util.logging.Log;
 import org.infinispan.util.logging.LogFactory;
 
+/**
+ * 
+ * DistributedLazyIterator.
+ * 
+ * Iterates on a distributed query.
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
 public class DistributedLazyIterator extends AbstractIterator {
 
    private UUID queryId;
@@ -25,15 +53,11 @@ public class DistributedLazyIterator extends AbstractIterator {
    // this array keeps all values (ordered) fetched by this iterator...
    private final ArrayList<Object> orderedValues = new ArrayList<Object>();
 
-   private final HashMap<UUID, LinkedList<Object>> keysMap = new HashMap<UUID, LinkedList<Object>>();
-
    private Cache cache;
-
-   public boolean hasNext = true;
 
    private final Sort sort;
 
-   private HashMap<UUID, ClusteredTopDocs> topDocss;
+   private HashMap<UUID, ClusteredTopDocs> topDocsResponses;
 
    private PriorityQueue hq;
 
@@ -41,23 +65,26 @@ public class DistributedLazyIterator extends AbstractIterator {
 
    private static final Log log = LogFactory.getLog(DistributedLazyIterator.class);
 
-   public DistributedLazyIterator(Sort sort, int fetchSize, int resultSize, UUID id) {
+   public DistributedLazyIterator(Sort sort, int fetchSize, int resultSize, UUID id,
+            HashMap<UUID, ClusteredTopDocs> topDocsResponses, Cache cache) {
       this.sort = sort;
       this.fetchSize = fetchSize;
       this.resultSize = resultSize;
       queryId = id;
+      this.cache = cache;
+      setTopDocs(topDocsResponses);
    }
 
-   public void setTopDocs(HashMap<UUID, ClusteredTopDocs> topDocss) {
-      this.topDocss = topDocss;
+   private void setTopDocs(HashMap<UUID, ClusteredTopDocs> topDocsResponses) {
+      this.topDocsResponses = topDocsResponses;
 
-      if (sort != null)
-         hq = new FieldDocSortedHitQueue(sort.getSort(), topDocss.size());
-      else
-         hq = new HitQueue(topDocss.size(), false);
+      if (sort != null) {
+         hq = new ISPNFieldDocSortedHitQueue(sort.getSort(), topDocsResponses.size());
+      } else
+         hq = new ISPNHitQueue(topDocsResponses.size(), false);
 
       // taking the first value of each queue
-      for (ClusteredTopDocs ctp : topDocss.values()) {
+      for (ClusteredTopDocs ctp : topDocsResponses.values()) {
          if (ctp.hasNext())
             hq.add(ctp.getNext());
       }
@@ -66,15 +93,15 @@ public class DistributedLazyIterator extends AbstractIterator {
 
    @Override
    public void close() {
-      // ClusteredQuery killQuery = ClusteredQuery.destroyLazyQuery(cache, queryId);
-      //
-      // ClusteredQueryInvoker invoker = new ClusteredQueryInvoker(rpcManager, cache);
-      // try {
-      // invoker.broadcast(killQuery);
-      // } catch (Exception e) {
-      // log.error("Error while broadcasting the kill query message to the cluster: {0}", e
-      // .getMessage());
-      // }
+       ClusteredQueryCommand killQuery = ClusteredQueryCommand.destroyLazyQuery(cache, queryId);
+      
+       ClusteredQueryInvoker invoker = new ClusteredQueryInvoker(cache);
+       try {
+         invoker.broadcast(killQuery);
+      } catch (Exception e) {
+         // FIXME
+         log.error("Error", e);
+      }
    }
 
    @Override
@@ -125,14 +152,14 @@ public class DistributedLazyIterator extends AbstractIterator {
 
       while (orderedValues.size() <= index || fetched < fetchSize) {
          // getting the next scoreDoc. If null, then there is no more results
-         ClusteredScoreDocs scoreDoc = (ClusteredScoreDocs) hq.pop();
+         ClusteredFieldDoc scoreDoc = (ClusteredFieldDoc) hq.pop();
          if (scoreDoc == null) {
             return;
          }
 
          // "recharging" the queue
-         ClusteredTopDocs topDoc = topDocss.get(scoreDoc.getNodeUuid());
-         ClusteredScoreDocs score = topDoc.getNext();
+         ClusteredTopDocs topDoc = topDocsResponses.get(scoreDoc.getNodeUuid());
+         ClusteredFieldDoc score = topDoc.getNext();
          if (score != null) {
             hq.add(score);
          }
@@ -143,7 +170,7 @@ public class DistributedLazyIterator extends AbstractIterator {
             Object value = invoker.getValue(scoreDoc.doc, topDoc.getNodeAddress(), queryId);
             orderedValues.add(value);
          } catch (Exception e) {
-            log.error("Error while trying to remoting fetch next value: {0}", e.getMessage());
+            log.error("Error while trying to remoting fetch next value: " + e.getMessage());
          }
 
          fetched++;
@@ -169,14 +196,6 @@ public class DistributedLazyIterator extends AbstractIterator {
 
    public void setQueryId(UUID queryId) {
       this.queryId = queryId;
-   }
-
-   public void setCache(Cache cache) {
-      this.cache = cache;
-   }
-
-   public Cache getCache() {
-      return cache;
    }
 
    @Override

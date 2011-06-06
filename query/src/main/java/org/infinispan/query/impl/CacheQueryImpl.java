@@ -51,8 +51,8 @@ import org.infinispan.query.backend.KeyTransformationHandler;
  */
 public class CacheQueryImpl implements CacheQuery {
 
-   private final Cache cache;
-   private final HSQuery hSearchQuery;
+   protected Cache cache;
+   protected HSQuery hSearchQuery;
 
    public CacheQueryImpl(Query luceneQuery, SearchFactoryIntegrator searchFactory, Cache cache, Class<?>... classes) {
       this.cache = cache;

@@ -39,10 +39,12 @@ import org.infinispan.remoting.responses.SuccessfulResponse;
 import org.infinispan.remoting.rpc.ResponseMode;
 import org.infinispan.remoting.rpc.RpcManager;
 import org.infinispan.remoting.transport.Address;
+import org.infinispan.util.logging.Log;
+import org.infinispan.util.logging.LogFactory;
 
 /**
  * 
- * Invoke a clusteredQueryCommand on the cluster, including on own node.
+ * Invoke a CusteredQueryCommand on the cluster, including on own node. 
  * 
  * @author Israel Lacerra <israeldl@gmail.com>
  * @since 5.1
@@ -54,10 +56,12 @@ public class ClusteredQueryInvoker {
    private final Cache localCacheInstance;
 
    private final Address myAddress;
+   
+   private static final Log log = LogFactory.getLog(ClusteredQueryInvoker.class);
 
    ClusteredQueryInvoker(Cache localCacheInstance) {
-      this.rpcManager = localCacheInstance.getAdvancedCache().getComponentRegistry().getLocalComponent(
-               RpcManager.class);
+      this.rpcManager = localCacheInstance.getAdvancedCache().getComponentRegistry()
+               .getLocalComponent(RpcManager.class);
       this.localCacheInstance = localCacheInstance;
       this.myAddress = localCacheInstance.getAdvancedCache().getRpcManager().getAddress();
    }
@@ -71,14 +75,12 @@ public class ClusteredQueryInvoker {
          try {
             return localResponse.get();
          } catch (InterruptedException e) {
-            // FIXME
-            // log.error("Error", e);
-            // throw e
+            //FIXME
+            e.printStackTrace();
             return null;
          } catch (ExecutionException e) {
-            // FIXME
-//            log.error("Error", e);
-//            throw e
+            //FIXME
+            e.printStackTrace();
             return null;
          }
       } else {
@@ -101,11 +103,9 @@ public class ClusteredQueryInvoker {
 
    public List<Object> broadcast(ClusteredQueryCommand clusteredQuery) throws Exception {
       // invoke on own node
-      System.out.println("aeeeeeee");
       FutureTask<Object> localResponse = localInvoke(clusteredQuery);
-      System.out.println("porrra");
 
-     List<Object> objects = cast(rpcManager.invokeRemotely(null, clusteredQuery,
+      List<Object> objects = cast(rpcManager.invokeRemotely(null, clusteredQuery,
                ResponseMode.SYNCHRONOUS, 10000));
       objects.add(localResponse.get());
       return objects;
@@ -122,18 +122,25 @@ public class ClusteredQueryInvoker {
 
    private List<Object> cast(Map<Address, Response> responses) {
       List<Object> objects = new LinkedList<Object>();
-
       for (Entry<Address, Response> pair : responses.entrySet()) {
          Response resp = pair.getValue();
          if (resp instanceof SuccessfulResponse) {
             Object response = ((SuccessfulResponse) resp).getResponseValue();
             objects.add(response);
+         }else{
+            //TODO
          }
       }
 
       return objects;
    }
 
+   /**
+    * Created to call a ClusteredQueryCommand on own node. 
+    * 
+    * @author Israel Lacerra <israeldl@gmail.com>
+    * @since 5.1
+    */
    private class ClusteredQueryCallable implements Callable<Object> {
 
       private final ClusteredQueryCommand clusteredQuery;
@@ -148,7 +155,6 @@ public class ClusteredQueryInvoker {
       @Override
       public Object call() throws Exception {
          try {
-            System.out.println("performinnnnnn");
             return clusteredQuery.perform(localInstance);
          } catch (Throwable e) {
             e.printStackTrace();

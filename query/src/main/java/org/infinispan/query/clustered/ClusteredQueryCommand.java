@@ -23,9 +23,9 @@ package org.infinispan.query.clustered;
 
 import java.util.UUID;
 
-import org.hibernate.search.query.engine.spi.HSQuery;
 import org.infinispan.Cache;
 import org.infinispan.commands.ReplicableCommand;
+import org.infinispan.commands.remote.BaseRpcCommand;
 import org.infinispan.context.InvocationContext;
 import org.infinispan.query.ISPNQuery;
 import org.infinispan.query.clustered.commandworkers.ClusteredQueryCommandWorker;
@@ -39,65 +39,62 @@ import org.infinispan.util.logging.LogFactory;
  * @author Israel Lacerra <israeldl@gmail.com>
  * @since 5.1
  */
-public class ClusteredQueryCommand implements ReplicableCommand{
-   
-   public static final byte COMMAND_ID = 18;
+public class ClusteredQueryCommand extends BaseRpcCommand implements ReplicableCommand {
+
+   public static final byte COMMAND_ID = 33;
+
    private static final Log log = LogFactory.getLog(ClusteredQueryCommand.class);
-   
+
    private String cacheName;
 
    private ClusteredQueryCommandType commandType;
 
    private ISPNQuery query;
-   
+
    // local instance (setted only when command arrives on target node)
    private Cache cache;
-   
-   // identifies the query 
+
+   // identifies the query
    private UUID lazyQueryId;
-   
+
    // for retrieve keys on a lazy query
-   private int docIndex;
-   
+   private Integer docIndex = 0;
+
    /**
-    * For CommandFactory only. To create a ClusteredQueryCommand, use createLazyIterator(), 
+    * For CommandFactory only. To create a ClusteredQueryCommand, use createLazyIterator(),
     * destroyLazyQuery(), getResultSize() or retrieveKeyFromLazyQuery()
     */
-   public ClusteredQueryCommand(){
-      
+   public ClusteredQueryCommand() {
+
    }
-   
-   
-   public void injectComponents(Cache cache){
+
+   public void injectComponents(Cache cache) {
       this.cache = cache;
    }
-   
-   private ClusteredQueryCommand(ClusteredQueryCommandType type, String cacheName){
+
+   private ClusteredQueryCommand(ClusteredQueryCommandType type, String cacheName) {
       commandType = type;
       this.cacheName = cacheName;
    }
-   
-   public static ClusteredQueryCommand createLazyIterator(ISPNQuery query,Cache cache, UUID id) {
-      ClusteredQueryCommand clQuery = new ClusteredQueryCommand(ClusteredQueryCommandType.CREATE_LAZY_SEARCHER, cache.getName());
+
+   public static ClusteredQueryCommand createLazyIterator(ISPNQuery query, Cache cache, UUID id) {
+      ClusteredQueryCommand clQuery = new ClusteredQueryCommand(
+               ClusteredQueryCommandType.CREATE_LAZY_ITERATOR, cache.getName());
       clQuery.query = query;
       clQuery.lazyQueryId = id;
       return clQuery;
    }
 
    public static ClusteredQueryCommand destroyLazyQuery(Cache cache, UUID id) {
-      ClusteredQueryCommand clQuery = new ClusteredQueryCommand(ClusteredQueryCommandType.DESTROY_SEARCHER, cache.getName());
+      ClusteredQueryCommand clQuery = new ClusteredQueryCommand(
+               ClusteredQueryCommandType.DESTROY_LAZY_ITERATOR, cache.getName());
       clQuery.lazyQueryId = id;
       return clQuery;
    }
 
-   public static ClusteredQueryCommand getResultSize(ISPNQuery query, Cache cache) {
-      ClusteredQueryCommand clQuery = new ClusteredQueryCommand(ClusteredQueryCommandType.GET_RESULT_SIZE, cache.getName());
-      clQuery.query = query;
-      return clQuery;
-   }
-
    public static ClusteredQueryCommand retrieveKeyFromLazyQuery(Cache cache, UUID id, int docIndex) {
-      ClusteredQueryCommand clQuery = new ClusteredQueryCommand(ClusteredQueryCommandType.GET_SOME_KEYS, cache.getName());
+      ClusteredQueryCommand clQuery = new ClusteredQueryCommand(
+               ClusteredQueryCommandType.GET_SOME_KEYS, cache.getName());
       clQuery.lazyQueryId = id;
       clQuery.docIndex = docIndex;
 
@@ -113,18 +110,20 @@ public class ClusteredQueryCommand implements ReplicableCommand{
    }
 
    /**
-    * Invokes a query on a remote cache and returns results (list of keys).
+    * Invokes a query on a (remote) cache and returns results (list of keys).
     * 
     * @param context
     *           invocation context, ignored.
     * @return returns an <code>List<Object></code>.
     */
+   @Override
    public Object perform(InvocationContext context) throws Throwable {
       return perform(cache);
    }
 
    public Object perform(Cache cache) {
-      ClusteredQueryCommandWorker worker = commandType.getCommand(cache, query, lazyQueryId, docIndex);
+      ClusteredQueryCommandWorker worker = commandType.getCommand(cache, query, lazyQueryId,
+               docIndex);
       return worker.perform();
    }
 
@@ -133,11 +132,15 @@ public class ClusteredQueryCommand implements ReplicableCommand{
    }
 
    public Object[] getParameters() {
-      return new Object[] { cacheName };
+      return new Object[] { cacheName, commandType, query, lazyQueryId, docIndex };
    }
 
    public void setParameters(int commandId, Object[] args) {
-      cacheName = (String) args[1];
+      cacheName = (String) args[0];
+      commandType = (ClusteredQueryCommandType) args[1];
+      query = (ISPNQuery) args[2];
+      lazyQueryId = (UUID) args[3];
+      docIndex = (Integer) args[4];
    }
 
    @Override

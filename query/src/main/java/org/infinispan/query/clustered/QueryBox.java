@@ -33,7 +33,10 @@ import org.infinispan.query.backend.KeyTransformationHandler;
 
 /**
  * 
- * Keep the active lazy iterators. Each node has his own box.
+ * Each node in the cluster has a QueryBox instance. The QueryBox keep the active lazy iterators on
+ * the cluster, so it can return values for the queries in a "lazy" way.
+ * 
+ * EVICTION: Currently the QueryBox keeps the last BOX_LIMIT used... probably there is a better way.
  * 
  * @author Israel Lacerra <israeldl@gmail.com>
  * @since 5.1
@@ -43,13 +46,13 @@ public class QueryBox {
    // <query UUID, ISPNQuery>
    private final ConcurrentHashMap<UUID, DocumentExtractor> queries = new ConcurrentHashMap<UUID, DocumentExtractor>();
 
-   // queries UUIDs ordered
-   private final LinkedList<UUID> ageOrderedKeys = new LinkedList<UUID>();
+   // queries UUIDs ordered (for eviction)
+   private final LinkedList<UUID> ageOrderedQueries = new LinkedList<UUID>();
 
    // For eviction. Probably there is a better way...
    private static final int BOX_LIMIT = 3000;
 
-   // this id will be sent with the responses
+   // this id will be sent with the responses to rpcs
    private final UUID myId = UUID.randomUUID();
 
    private SearchFactoryImplementor searchFactoryImplementor;
@@ -58,10 +61,14 @@ public class QueryBox {
 
    public org.infinispan.util.logging.Log log;
 
-   public Object getValue(UUID uid, int docIndex) {
-      touch(uid);
+   public Object getValue(UUID queryUuid, int docIndex) {
+      touch(queryUuid);
 
-      DocumentExtractor extractor = queries.get(uid);
+      DocumentExtractor extractor = queries.get(queryUuid);
+
+      if (extractor == null) {
+         throw new IllegalStateException("Query not found!");
+      }
 
       String bufferDocumentId;
       try {
@@ -76,55 +83,26 @@ public class QueryBox {
       return value;
    }
 
-   // public List<Object> getKeys(UUID uid, ScoreDoc[] docs) {
-   // Searcher searcher = queries.get(uid);
-   //
-   // List<Object> keys = new ArrayList<Object>(docs.length);
-   //
-   // for (ScoreDoc doc : docs) {
-   // keys.add(getKey(searcher, doc.doc));
-   // }
-   //
-   // return keys;
-   // }
-
-   // private Object getKey(Searcher searcher, int docIndex) {
-   // Document doc;
-   // try {
-   // doc = searcher.doc(docIndex);
-   // } catch (CorruptIndexException e) {
-   // log.error("Error while trying to get more results... {0}", e);
-   // return null;
-   // } catch (IOException e) {
-   // log.error("Error while trying to get more results... {0}", e);
-   // return null;
-   // }
-   // Class clazz = DocumentBuilderIndexedEntity.getDocumentClass(doc);
-   // String id = (String) DocumentBuilderIndexedEntity.getDocumentId(
-   // getSearchFactoryImplementor(), clazz, doc);
-   // Object key = KeyTransformationHandler.stringToKey(id);
-   // return key;
-   // }
-
    private void touch(UUID id) {
-      synchronized (ageOrderedKeys) {
-         ageOrderedKeys.remove(id);
-         ageOrderedKeys.addFirst(id);
+      synchronized (ageOrderedQueries) {
+         ageOrderedQueries.remove(id);
+         ageOrderedQueries.addFirst(id);
       }
    }
 
    public void kill(UUID id) {
       DocumentExtractor extractor = queries.remove(id);
+      ageOrderedQueries.remove(id);
       if (extractor != null)
          extractor.close();
    }
 
    public synchronized void put(UUID id, DocumentExtractor extractor) {
-      synchronized (ageOrderedKeys) {
-         if (ageOrderedKeys.size() >= BOX_LIMIT) {
-            ageOrderedKeys.removeLast();
+      synchronized (ageOrderedQueries) {
+         if (ageOrderedQueries.size() >= BOX_LIMIT) {
+            ageOrderedQueries.removeLast();
          }
-         ageOrderedKeys.add(id);
+         ageOrderedQueries.add(id);
       }
 
       queries.put(id, extractor);
@@ -136,10 +114,6 @@ public class QueryBox {
 
    public void setSearchFactoryImplementor(SearchFactoryImplementor searchFactoryImplementor) {
       this.searchFactoryImplementor = searchFactoryImplementor;
-   }
-
-   public SearchFactoryImplementor getSearchFactoryImplementor() {
-      return searchFactoryImplementor;
    }
 
    public void setCache(Cache cache) {

@@ -24,11 +24,10 @@ package org.infinispan.query;
 import org.infinispan.Cache;
 import org.infinispan.commands.ReplicableCommand;
 import org.infinispan.commands.module.ModuleCommandInitializer;
-import org.infinispan.factories.annotations.Inject;
 import org.infinispan.query.clustered.ClusteredQueryCommand;
 
 /**
- * Initializes remote commands
+ * Initializes query module remote commands
  * 
  * @author Israel Lacerra <israeldl@gmail.com>
  * @since 5.1
@@ -36,16 +35,16 @@ import org.infinispan.query.clustered.ClusteredQueryCommand;
 public class CommandInitializer implements ModuleCommandInitializer {
 
    private Cache cache;
-
-   @Inject
-   public void inject(Cache cache) {
+   
+   public void setCache(Cache cache){
       this.cache = cache;
    }
-
+   
    @Override
    public void initializeReplicableCommand(ReplicableCommand c, boolean isRemote) {
-      if (c instanceof ClusteredQueryCommand)
-         ((ClusteredQueryCommand) c).injectComponents(cache);
+      if (c instanceof ClusteredQueryCommand){
+          ((ClusteredQueryCommand) c).injectComponents(cache);
+      }
    }
 
 }

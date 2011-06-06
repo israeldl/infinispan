@@ -26,33 +26,46 @@ import java.util.UUID;
 import org.infinispan.Cache;
 import org.infinispan.query.ISPNQuery;
 import org.infinispan.query.clustered.commandworkers.CQCreateLazyQuery;
+import org.infinispan.query.clustered.commandworkers.CQKillLazyIterator;
 import org.infinispan.query.clustered.commandworkers.CQLazyFetcher;
 import org.infinispan.query.clustered.commandworkers.ClusteredQueryCommandWorker;
 
+/**
+ * 
+ * Types of ClusteredQueryCommandWorker. Each type defines a different behavior for a
+ * ClusteredQueryCommand...
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
 public enum ClusteredQueryCommandType {
 
-   GET_ALL_KEY_LIST(CQCreateLazyQuery.class), CREATE_LAZY_SEARCHER(CQCreateLazyQuery.class), DESTROY_SEARCHER(
-            CQCreateLazyQuery.class), GET_SOME_KEYS(CQLazyFetcher.class), GET_RESULT_SIZE(
-            CQCreateLazyQuery.class);
-
-   private Class clazz;
-
-   private ClusteredQueryCommandType(Class clazz) {
-      this.clazz = clazz;
-   }
-
-   public ClusteredQueryCommandWorker getCommand(Cache cache, ISPNQuery query,UUID lazyQueryId, int docIndex) {
-      ClusteredQueryCommandWorker command = null;
-      try {
-         command = (ClusteredQueryCommandWorker) clazz.newInstance();
-      } catch (InstantiationException e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      } catch (IllegalAccessException e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
+   CREATE_LAZY_ITERATOR() {
+      @Override
+      public ClusteredQueryCommandWorker getNewInstance() {
+         return new CQCreateLazyQuery();
       }
-      command.init(cache, query,lazyQueryId, docIndex);
+   },
+   DESTROY_LAZY_ITERATOR() {
+      @Override
+      public ClusteredQueryCommandWorker getNewInstance() {
+         return new CQKillLazyIterator();
+      }
+   },
+   GET_SOME_KEYS() {
+      @Override
+      public ClusteredQueryCommandWorker getNewInstance() {
+         return new CQLazyFetcher();
+      }
+   };
+
+   protected abstract ClusteredQueryCommandWorker getNewInstance();
+
+   public ClusteredQueryCommandWorker getCommand(Cache cache, ISPNQuery query, UUID lazyQueryId,
+            int docIndex) {
+      ClusteredQueryCommandWorker command = null;
+      command = getNewInstance();
+      command.init(cache, query, lazyQueryId, docIndex);
       return command;
    }
 

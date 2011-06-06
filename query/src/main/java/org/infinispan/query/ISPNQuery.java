@@ -26,6 +26,7 @@ import static org.hibernate.search.util.FilterCacheModeTypeHelper.cacheInstance;
 import static org.hibernate.search.util.FilterCacheModeTypeHelper.cacheResults;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,11 +74,29 @@ import org.hibernate.search.query.engine.spi.TimeoutManager;
 import org.hibernate.search.store.DirectoryProvider;
 import org.hibernate.search.store.IndexShardingStrategy;
 
-public class ISPNQuery implements HSQuery {
+/**
+ * 
+ * ISPNQuery.
+ * 
+ * Copy of HSQueryImpl with minor changes:
+ * 
+ * public QueryHits getQueryHits() public DocumentExtractor queryDocumentExtractor(QueryHits
+ * queryHits) public void setSearchFactoryImplementor(SearchFactoryImplementor
+ * searchFactoryImplementor)
+ * 
+ * And some fields are transient...to be able to send this class through RPC. Is it a good idea?
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
+public class ISPNQuery implements HSQuery, Serializable {
+
+   /** The serialVersionUID */
+   private static final long serialVersionUID = 8426595829918711601L;
 
    private static final FullTextFilterImplementor[] EMPTY_FULL_TEXT_FILTER_IMPLEMENTOR = new FullTextFilterImplementor[0];
 
-   private SearchFactoryImplementor searchFactoryImplementor;
+   private transient SearchFactoryImplementor searchFactoryImplementor;
    private Query luceneQuery;
    private List<Class<?>> targetedEntities;
    private TimeoutManagerImpl timeoutManager;
@@ -93,12 +112,12 @@ public class ISPNQuery implements HSQuery {
    private String[] projectedFields;
    private int firstResult;
    private Integer maxResults;
-   private Set<Class<?>> classesAndSubclasses;
+   private transient Set<Class<?>> classesAndSubclasses;
    // optimization: if we can avoid the filter clause (we can most of the time) do it as it has a
    // significant perf impact
    private boolean needClassFilterClause;
    private Set<String> idFieldNames;
-   private TimeoutExceptionFactory timeoutExceptionFactory = QueryTimeoutException.DEFAULT_TIMEOUT_EXCEPTION_FACTORY;
+   private transient TimeoutExceptionFactory timeoutExceptionFactory = QueryTimeoutException.DEFAULT_TIMEOUT_EXCEPTION_FACTORY;
    private boolean useFieldCacheOnClassTypes = false;
    private FacetManagerImpl facetManager;
 
@@ -111,8 +130,8 @@ public class ISPNQuery implements HSQuery {
    public ISPNQuery(SearchFactoryImplementor searchFactoryImplementor) {
       setSearchFactoryImplementor(searchFactoryImplementor);
    }
-   
-   public void setSearchFactoryImplementor(SearchFactoryImplementor searchFactoryImplementor){
+
+   public void setSearchFactoryImplementor(SearchFactoryImplementor searchFactoryImplementor) {
       this.searchFactoryImplementor = searchFactoryImplementor;
    }
 
@@ -404,6 +423,9 @@ public class ISPNQuery implements HSQuery {
       if (stats) {
          startTime = System.nanoTime();
       }
+
+      System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      System.out.println("sorte: " + sort);
 
       if (n == null) { // try to make sure that we get the right amount of top docs
          queryHits = new QueryHits(searcher, filteredQuery, filter, sort, getTimeoutManagerImpl(),

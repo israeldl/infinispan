@@ -23,53 +23,32 @@ package org.infinispan.query.clustered;
 
 import java.util.UUID;
 
-import org.apache.lucene.search.TopDocs;
-import org.infinispan.remoting.transport.Address;
+import org.apache.lucene.search.FieldDoc;
+import org.apache.lucene.search.ScoreDoc;
 
 /**
  * 
- * ClusteredTopDocs.
+ * ClusteredFIeldDoc.
  * 
- * A TopDocs with UUID and address of node who has the doc.
+ * A FieldDoc with UUID of node who has the doc.
  * 
  * @author Israel Lacerra <israeldl@gmail.com>
  * @since 5.1
  */
-public class ClusteredTopDocs {
+public class ClusteredFieldDoc extends FieldDoc {
 
-   private int currentIndex = 0;
+   /** The serialVersionUID */
+   private static final long serialVersionUID = 1834188214178689282L;
 
-   private final TopDocs topDocs;
+   private final UUID nodeUuid;
 
-   private final UUID id;
-
-   private Address nodeAddress;
-
-   ClusteredTopDocs(TopDocs topDocs, UUID id) {
-      this.topDocs = topDocs;
-      this.id = id;
+   public ClusteredFieldDoc(ScoreDoc scoreDoc, UUID nodeUuid) {
+      super(scoreDoc.doc, scoreDoc.score, ((FieldDoc) scoreDoc).fields);
+      this.nodeUuid = nodeUuid;
    }
 
-   public UUID getId() {
-      return id;
+   public UUID getNodeUuid() {
+      return nodeUuid;
    }
 
-   public boolean hasNext() {
-      return !(currentIndex >= topDocs.scoreDocs.length);
-   } 
-
-   public ClusteredFieldDoc getNext() {
-      if (currentIndex >= topDocs.scoreDocs.length)
-         return null;
-
-      return new ClusteredFieldDoc(topDocs.scoreDocs[currentIndex++], id);
-   }
-
-   public void setNodeAddress(Address nodeAddress) {
-      this.nodeAddress = nodeAddress;
-   }
-
-   public Address getNodeAddress() {
-      return nodeAddress;
-   }
 }

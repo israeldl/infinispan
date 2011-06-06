@@ -23,11 +23,19 @@ package org.infinispan.query.clustered.commandworkers;
 
 import org.infinispan.query.clustered.QueryBox;
 
+/**
+ * 
+ * CQLazyFetcher.
+ * 
+ * Fetch a new result for a lazy iterator
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
 public class CQLazyFetcher extends ClusteredQueryCommandWorker {
 
    @Override
    public Object perform() {
-      System.out.println("fetchigggggggggggggggggggggg");
       QueryBox box = getQueryBox();
       return box.getValue(lazyQueryId, docIndex);
    }

@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * Copyright 2011, Red Hat Middleware LLC, and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -19,27 +19,25 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.infinispan.query.clustered;
+package org.infinispan.query.clustered.commandworkers;
 
-import java.util.UUID;
+/**
+ * 
+ * CQKillLazyIterator.
+ * 
+ * Close a distributed lazy iterator...
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
+public class CQKillLazyIterator extends ClusteredQueryCommandWorker{
 
-import org.apache.lucene.search.FieldDoc;
-import org.apache.lucene.search.ScoreDoc;
-
-public class ClusteredScoreDocs extends FieldDoc {
-
-   /** The serialVersionUID */
-   private static final long serialVersionUID = 1834188214178689282L;
-
-   private final UUID nodeUuid;
-
-   public ClusteredScoreDocs(ScoreDoc scoreDoc, UUID nodeUuid) {
-      super(scoreDoc.doc, scoreDoc.score, ((FieldDoc) scoreDoc).fields);
-      this.nodeUuid = nodeUuid;
-   }
-
-   public UUID getNodeUuid() {
-      return nodeUuid;
+   @Override
+   public Object perform() {
+      getQueryBox().kill(lazyQueryId);
+      
+      // FIXME not a good idea...
+      return null;
    }
 
 }

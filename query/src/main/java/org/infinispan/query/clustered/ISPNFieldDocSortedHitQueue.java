@@ -28,7 +28,15 @@ import org.apache.lucene.search.FieldDoc;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.PriorityQueue;
 
-public class FieldDocSortedHitQueue extends PriorityQueue {
+/**
+ * 
+ * This class is a copy of apache lucene FieldDocSortedHitQueue. The apache class is not public. We
+ * have to find another way...
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
+public class ISPNFieldDocSortedHitQueue extends PriorityQueue {
 
    // this cannot contain AUTO fields - any AUTO fields should
    // have been resolved by the time this class is used.
@@ -46,7 +54,7 @@ public class FieldDocSortedHitQueue extends PriorityQueue {
     * @param size
     *           The number of hits to retain. Must be greater than zero.
     */
-   FieldDocSortedHitQueue(SortField[] fields, int size) {
+   ISPNFieldDocSortedHitQueue(SortField[] fields, int size) {
       this.fields = fields;
       this.collators = hasCollators(fields);
       initialize(size);
@@ -209,6 +217,6 @@ public class FieldDocSortedHitQueue extends PriorityQueue {
       if (c == 0)
          return docA.doc > docB.doc;
 
-      return !(c > 0);
+      return (c > 0);
    }
 }

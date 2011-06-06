@@ -23,13 +23,22 @@ package org.infinispan.query.clustered.commandworkers;
 
 import java.util.UUID;
 
-import org.hibernate.search.engine.SearchFactoryImplementor;
 import org.hibernate.search.spi.SearchFactoryIntegrator;
 import org.infinispan.Cache;
 import org.infinispan.factories.ComponentRegistry;
 import org.infinispan.query.ISPNQuery;
 import org.infinispan.query.clustered.QueryBox;
 
+/**
+ * 
+ * ClusteredQueryCommandWorker.
+ * 
+ * Add specific behavior for ClusteredQueryCommand. Each ClusteredQueryCommandType links to a
+ * ClusteredQueryCommandWorker
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
 public abstract class ClusteredQueryCommandWorker {
 
    protected Cache cache;
@@ -56,11 +65,6 @@ public abstract class ClusteredQueryCommandWorker {
       if (queryBox == null) {
          ComponentRegistry cr = cache.getAdvancedCache().getComponentRegistry();
          queryBox = cr.getLocalComponent(QueryBox.class);
-
-         queryBox.setSearchFactoryImplementor(cache.getAdvancedCache().getComponentRegistry()
-                  .getLocalComponent(SearchFactoryImplementor.class));
-
-         queryBox.setCache(cache);
       }
 
       return queryBox;

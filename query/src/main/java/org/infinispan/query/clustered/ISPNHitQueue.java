@@ -41,7 +41,13 @@ package org.infinispan.query.clustered;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.util.PriorityQueue;
 
-public class HitQueue extends PriorityQueue {
+/**
+ * Copy from apache lucene HitQueue. This class has to be removed... somehow.
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
+public class ISPNHitQueue extends PriorityQueue {
 
    private final boolean prePopulate;
 
@@ -84,7 +90,7 @@ public class HitQueue extends PriorityQueue {
     *           specifies whether to pre-populate the queue with sentinel values.
     * @see #getSentinelObject()
     */
-   HitQueue(int size, boolean prePopulate) {
+   ISPNHitQueue(int size, boolean prePopulate) {
       this.prePopulate = prePopulate;
       initialize(size);
    }

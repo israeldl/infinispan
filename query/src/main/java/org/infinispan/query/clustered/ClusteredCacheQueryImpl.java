@@ -32,10 +32,10 @@ import org.hibernate.search.SearchException;
 import org.hibernate.search.engine.SearchFactoryImplementor;
 import org.hibernate.search.spi.SearchFactoryIntegrator;
 import org.infinispan.Cache;
+import org.infinispan.query.CacheQuery;
 import org.infinispan.query.ISPNQuery;
 import org.infinispan.query.QueryIterator;
 import org.infinispan.query.impl.CacheQueryImpl;
-import org.infinispan.remoting.rpc.RpcManager;
 
 /**
  * 
@@ -44,79 +44,79 @@ import org.infinispan.remoting.rpc.RpcManager;
  * @author Israel Lacerra <israeldl@gmail.com>
  * @since 5.1
  */
-public class ClusteredCacheQueryImpl extends CacheQueryImpl{
-   
+public class ClusteredCacheQueryImpl extends CacheQueryImpl {
+
    private Sort sort;
 
+   private Integer resultSize;
+
    public ClusteredCacheQueryImpl(Query luceneQuery, SearchFactoryIntegrator searchFactory,
-            Cache cache,Class<?>... classes) {
+            Cache cache, Class<?>... classes) {
       super(luceneQuery, searchFactory, cache, classes);
-      hSearchQuery = new ISPNQuery((SearchFactoryImplementor)searchFactory);
-      hSearchQuery.luceneQuery( luceneQuery )
-      //      .timeoutExceptionFactory( exceptionFactory ) Make one if needed
-      .targetedEntities( Arrays.asList( classes ) );
+      hSearchQuery = new ISPNQuery((SearchFactoryImplementor) searchFactory);
+      hSearchQuery.luceneQuery(luceneQuery)
+      // .timeoutExceptionFactory( exceptionFactory ) Make one if needed
+               .targetedEntities(Arrays.asList(classes));
    }
-   
+
    @Override
-   public void setSort(Sort sort){
+   public CacheQuery sort(Sort sort) {
       this.sort = sort;
-      super.setSort(sort);
+      return super.sort(sort);
    }
-   
+
    @Override
    public int getResultSize() {
-      // TODO
-      return 0;
+      if (resultSize == null) {
+         // TODO fetch result size
+      }
+      return resultSize;
    }
-   
+
    @Override
    public QueryIterator iterator(int fetchSize) throws SearchException {
       // TODO
       return null;
    }
-   
+
    @Override
    public QueryIterator lazyIterator(int fetchSize) {
-      UUID id = UUID.randomUUID();
-      ClusteredQueryCommand command = ClusteredQueryCommand.createLazyIterator((ISPNQuery)hSearchQuery, cache, id);
-      
+      UUID lazyItId = UUID.randomUUID();
+
+      ClusteredQueryCommand command = ClusteredQueryCommand.createLazyIterator(
+               (ISPNQuery) hSearchQuery, cache, lazyItId);
+
       ClusteredQueryInvoker invoker = new ClusteredQueryInvoker(cache);
-      
-      HashMap<UUID, ClusteredTopDocs> topDocss = null;
-      
+
+      HashMap<UUID, ClusteredTopDocs> topDocsResponses = null;
+      int resultSize = 0;
       try {
          List<Object> responses = invoker.broadcast(command);
-         
-         topDocss = new HashMap<UUID, ClusteredTopDocs>();
+
+         topDocsResponses = new HashMap<UUID, ClusteredTopDocs>();
 
          for (Object response : responses) {
             QueryResponse queryResponse = (QueryResponse) response;
-            System.out.println("QueryResponse: "+ response);
             ClusteredTopDocs topDocs = new ClusteredTopDocs(queryResponse.getTopDocs(),
                      queryResponse.getNodeUUID());
 
+            resultSize += queryResponse.getResultSize();
             topDocs.setNodeAddress(queryResponse.getAddress());
-
-            topDocss.put(queryResponse.getNodeUUID(), topDocs);
-
+            topDocsResponses.put(queryResponse.getNodeUUID(), topDocs);
          }
-         
+
       } catch (Exception e) {
          e.printStackTrace();
          // FIXME
          return null;
       }
-      int resultSize = getResultSize();
-      DistributedLazyIterator it = new DistributedLazyIterator(sort, fetchSize, resultSize, id);
-      it.setQueryId(id);
-      it.setCache(cache);
-      it.setTopDocs(topDocss);
-      
-      System.out.println("sjjsjsjsjsj");
+      this.resultSize = resultSize;
+      DistributedLazyIterator it = new DistributedLazyIterator(sort, fetchSize, resultSize,
+               lazyItId, topDocsResponses, cache);
 
       return it;
    }
-   
+
    @Override
    public List<Object> list() throws SearchException {
       // TODO

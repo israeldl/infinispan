@@ -28,30 +28,38 @@ import org.hibernate.search.query.engine.spi.DocumentExtractor;
 import org.infinispan.query.clustered.QueryBox;
 import org.infinispan.query.clustered.QueryResponse;
 
+/**
+ * 
+ * CQCreateLazyQuery.
+ * 
+ * Creates a lazy iterator of a distributed query.
+ * 
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
+ */
 public class CQCreateLazyQuery extends ClusteredQueryCommandWorker {
 
    @Override
    public Object perform() {
-      System.out.println("aaaaaaaaaaaaaahhhuuhuhuhu");
       query.setSearchFactoryImplementor((SearchFactoryImplementor) getSearchFactory());
       QueryHits queryHits = query.getQueryHits();
       DocumentExtractor extractor = query.queryDocumentExtractor(queryHits);
+      int resultSize = query.queryResultSize();
 
       QueryBox box = getQueryBox();
-
       box.put(lazyQueryId, extractor);
 
       TopDocs topDocs = queryHits.getTopDocs();
 
-      QueryResponse queryResponse = new QueryResponse(topDocs, box.getMyId());
+      QueryResponse queryResponse = new QueryResponse(topDocs, box.getMyId(), resultSize);
       queryResponse.setAddress(cache.getAdvancedCache().getRpcManager().getAddress());
       return queryResponse;
    }
 
-//   private void getAllKeys(QueryResponse queryResponse) {
-//      List<Object> keys = getQueryBox().getKeys(lazyQueryId, queryResponse.getTopDocs().scoreDocs);
-//      queryResponse.setKeys(keys);
-//   }
+   // private void getAllKeys(QueryResponse queryResponse) {
+   // List<Object> keys = getQueryBox().getKeys(lazyQueryId, queryResponse.getTopDocs().scoreDocs);
+   // queryResponse.setKeys(keys);
+   // }
 
    // fixme max results = 50
 

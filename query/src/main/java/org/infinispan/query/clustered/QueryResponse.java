@@ -1,7 +1,27 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2011, Red Hat Middleware LLC, and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
 package org.infinispan.query.clustered;
 
 import java.io.Serializable;
-import java.util.List;
 import java.util.UUID;
 
 import org.apache.lucene.search.TopDocs;
@@ -11,16 +31,14 @@ import org.infinispan.remoting.transport.Address;
  * 
  * QueryResponse.
  * 
- * A response of a request of more results to a lazy iterator
+ * A response of a request to create a new distributed lazy iterator
  * 
- * @author israel
- * @since 4.0
+ * @author Israel Lacerra <israeldl@gmail.com>
+ * @since 5.1
  */
 public class QueryResponse implements Serializable {
 
    private static final long serialVersionUID = -2113889511877165954L;
-
-   private List<Object> keys;
 
    private final UUID nodeUUID;
 
@@ -28,32 +46,20 @@ public class QueryResponse implements Serializable {
 
    private Address address;
 
-   QueryResponse(List<Object> keys, UUID nodeUUid) {
-      this.keys = keys;
-      this.nodeUUID = nodeUUid;
-   }
+   private Integer resultSize;
 
    public TopDocs getTopDocs() {
       return topDocs;
    }
 
-   public void setKeys(List<Object> keys) {
-      this.keys = keys;
-   }
-
-   public QueryResponse(TopDocs topDocs, UUID nodeUUid) {
-      this.keys = null;
+   public QueryResponse(TopDocs topDocs, UUID nodeUUid, int resultSize) {
       this.nodeUUID = nodeUUid;
       this.topDocs = topDocs;
+      this.resultSize = resultSize;
    }
 
-   QueryResponse(Object value, UUID nodeUUid, int docId) {
-      nodeUUID = nodeUUid;
-      keys = null;
-   }
-
-   public List<Object> getKeys() {
-      return keys;
+   public int getResultSize() {
+      return resultSize;
    }
 
    public UUID getNodeUUID() {
