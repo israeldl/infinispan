@@ -424,9 +424,6 @@ public class ISPNQuery implements HSQuery, Serializable {
          startTime = System.nanoTime();
       }
 
-      System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-      System.out.println("sorte: " + sort);
-
       if (n == null) { // try to make sure that we get the right amount of top docs
          queryHits = new QueryHits(searcher, filteredQuery, filter, sort, getTimeoutManagerImpl(),
                   facetManager.getFacetRequests(), useFieldCacheOnTypes(),
