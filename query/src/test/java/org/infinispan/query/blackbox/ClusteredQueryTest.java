@@ -131,7 +131,7 @@ public class ClusteredQueryTest extends MultipleCacheManagersTest {
       cacheQuery = Search.getSearchManager(cache2).getClusteredQuery(luceneQuery);
 
       // aplying sort
-      SortField sortField = new SortField("name", SortField.STRING);
+      SortField sortField = new SortField("age", SortField.INT);
       Sort sort = new Sort(sortField);
       cacheQuery.sort(sort);
 
