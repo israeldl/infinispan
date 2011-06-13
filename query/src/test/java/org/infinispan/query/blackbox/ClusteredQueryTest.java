@@ -26,7 +26,6 @@ import static org.infinispan.query.helper.TestQueryHelperFactory.createQueryPars
 
 import java.util.List;
 
-import org.apache.log4j.BasicConfigurator;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.Query;
@@ -39,8 +38,6 @@ import org.infinispan.query.QueryIterator;
 import org.infinispan.query.Search;
 import org.infinispan.query.test.Person;
 import org.infinispan.test.MultipleCacheManagersTest;
-import org.infinispan.util.logging.Log;
-import org.infinispan.util.logging.LogFactory;
 import org.testng.annotations.Test;
 
 /**
@@ -52,8 +49,6 @@ import org.testng.annotations.Test;
  */
 @Test(groups = "functional")
 public class ClusteredQueryTest extends MultipleCacheManagersTest {
-
-   private static final Log log = LogFactory.getLog(ClusteredQueryTest.class);
 
    Cache<String, Person> cache1, cache2;
    Person person1;
