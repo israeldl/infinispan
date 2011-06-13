@@ -62,7 +62,9 @@ public class ClusteredTopDocs {
       if (currentIndex >= topDocs.scoreDocs.length)
          return null;
 
-      return new ClusteredFieldDoc(topDocs.scoreDocs[currentIndex++], id);
+      ClusteredFieldDoc doc =  new ClusteredFieldDoc(topDocs.scoreDocs[currentIndex], id, currentIndex);
+      currentIndex++;
+      return doc;
    }
 
    public void setNodeAddress(Address nodeAddress) {

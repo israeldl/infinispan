@@ -21,15 +21,21 @@
  */
 package org.infinispan.query.clustered;
 
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import org.apache.lucene.search.FieldDoc;
 import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.PriorityQueue;
 import org.infinispan.Cache;
 import org.infinispan.query.impl.AbstractIterator;
+import org.infinispan.util.ReflectionUtil;
 import org.infinispan.util.logging.Log;
 import org.infinispan.util.logging.LogFactory;
 
@@ -59,7 +65,7 @@ public class DistributedLazyIterator extends AbstractIterator {
 
    private HashMap<UUID, ClusteredTopDocs> topDocsResponses;
 
-   private PriorityQueue hq;
+   private PriorityQueue<FieldDoc> hq;
 
    private final int resultSize;
 
@@ -79,9 +85,16 @@ public class DistributedLazyIterator extends AbstractIterator {
       this.topDocsResponses = topDocsResponses;
 
       if (sort != null) {
-         hq = new ISPNFieldDocSortedHitQueue(sort.getSort(), topDocsResponses.size());
+         // reversing sort fields to FieldDocSortedHitQueue work properly
+         for (SortField sf : sort.getSort()) {
+            boolean reverse = (Boolean) ReflectionUtil.getValue(sf, "reverse");
+            ReflectionUtil.setValue(sf, "reverse", !reverse);
+         }
+         hq = ISPNPriorityQueueFactory.getFieldDocSortedHitQueue(topDocsResponses.size(), sort
+                  .getSort());
+
       } else
-         hq = new ISPNHitQueue(topDocsResponses.size(), false);
+         hq = ISPNPriorityQueueFactory.getHitQueue(topDocsResponses.size());
 
       // taking the first value of each queue
       for (ClusteredTopDocs ctp : topDocsResponses.values()) {
@@ -93,14 +106,13 @@ public class DistributedLazyIterator extends AbstractIterator {
 
    @Override
    public void close() {
-       ClusteredQueryCommand killQuery = ClusteredQueryCommand.destroyLazyQuery(cache, queryId);
-      
-       ClusteredQueryInvoker invoker = new ClusteredQueryInvoker(cache);
-       try {
+      ClusteredQueryCommand killQuery = ClusteredQueryCommand.destroyLazyQuery(cache, queryId);
+
+      ClusteredQueryInvoker invoker = new ClusteredQueryInvoker(cache);
+      try {
          invoker.broadcast(killQuery);
       } catch (Exception e) {
-         // FIXME
-         log.error("Error", e);
+         log.error("Could not close the distributed iterator", e);
       }
    }
 
@@ -167,7 +179,7 @@ public class DistributedLazyIterator extends AbstractIterator {
          // fetching the value
          ClusteredQueryInvoker invoker = new ClusteredQueryInvoker(cache);
          try {
-            Object value = invoker.getValue(scoreDoc.doc, topDoc.getNodeAddress(), queryId);
+            Object value = invoker.getValue(scoreDoc.index, topDoc.getNodeAddress(), queryId);
             orderedValues.add(value);
          } catch (Exception e) {
             log.error("Error while trying to remoting fetch next value: " + e.getMessage());

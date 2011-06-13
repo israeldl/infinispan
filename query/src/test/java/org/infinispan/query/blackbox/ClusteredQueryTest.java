@@ -26,6 +26,7 @@ import static org.infinispan.query.helper.TestQueryHelperFactory.createQueryPars
 
 import java.util.List;
 
+import org.apache.log4j.BasicConfigurator;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.Query;
@@ -67,6 +68,7 @@ public class ClusteredQueryTest extends MultipleCacheManagersTest {
    final String key3 = "MiniGoat";
 
    public ClusteredQueryTest() {
+      // BasicConfigurator.configure();
       cleanup = CleanupPhase.AFTER_METHOD;
    }
 
@@ -104,16 +106,16 @@ public class ClusteredQueryTest extends MultipleCacheManagersTest {
 
       // Put the 3 created objects in the cache1.
 
-      cache1.put(key1, person1);
+      cache2.put(key1, person1);
       cache1.put(key2, person2);
       cache1.put(key3, person3);
-      
+
       person4 = new Person();
       person4.setName("MightyGoat");
       person4.setBlurb("Also eats grass");
       person4.setAge(66);
-      
-      cache2.put("newOne", person4);
+
+      cache1.put("newOne", person4);
    }
 
    public void testOrdered() throws ParseException {
@@ -128,7 +130,7 @@ public class ClusteredQueryTest extends MultipleCacheManagersTest {
       queries[1] = luceneQuery;
 
       luceneQuery = luceneQuery.combine(queries);
-      cacheQuery = Search.getSearchManager(cache2).getClusteredQuery(luceneQuery);
+      cacheQuery = Search.getSearchManager(cache1).getClusteredQuery(luceneQuery);
 
       // aplying sort
       SortField sortField = new SortField("age", SortField.INT);
@@ -145,6 +147,8 @@ public class ClusteredQueryTest extends MultipleCacheManagersTest {
          assert person.getAge() > previousAge;
          previousAge = person.getAge();
       }
+
+      iterator.close();
    }
 
 }

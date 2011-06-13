@@ -36,6 +36,8 @@ import org.infinispan.query.CacheQuery;
 import org.infinispan.query.ISPNQuery;
 import org.infinispan.query.QueryIterator;
 import org.infinispan.query.impl.CacheQueryImpl;
+import org.infinispan.util.logging.Log;
+import org.infinispan.util.logging.LogFactory;
 
 /**
  * 
@@ -45,6 +47,8 @@ import org.infinispan.query.impl.CacheQueryImpl;
  * @since 5.1
  */
 public class ClusteredCacheQueryImpl extends CacheQueryImpl {
+
+   private static final Log log = LogFactory.getLog(ClusteredCacheQueryImpl.class);
 
    private Sort sort;
 
@@ -106,9 +110,7 @@ public class ClusteredCacheQueryImpl extends CacheQueryImpl {
          }
 
       } catch (Exception e) {
-         e.printStackTrace();
-         // FIXME
-         return null;
+         log.error("Could not broadcast distributed query", e);
       }
       this.resultSize = resultSize;
       DistributedLazyIterator it = new DistributedLazyIterator(sort, fetchSize, resultSize,

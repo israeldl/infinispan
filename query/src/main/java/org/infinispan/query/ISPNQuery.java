@@ -99,7 +99,7 @@ public class ISPNQuery implements HSQuery, Serializable {
    private transient SearchFactoryImplementor searchFactoryImplementor;
    private Query luceneQuery;
    private List<Class<?>> targetedEntities;
-   private TimeoutManagerImpl timeoutManager;
+   private transient TimeoutManagerImpl timeoutManager;
    private Set<Class<?>> indexedTargetedEntities;
    private boolean allowFieldSelectionInProjection = true;
    /**
@@ -119,7 +119,7 @@ public class ISPNQuery implements HSQuery, Serializable {
    private Set<String> idFieldNames;
    private transient TimeoutExceptionFactory timeoutExceptionFactory = QueryTimeoutException.DEFAULT_TIMEOUT_EXCEPTION_FACTORY;
    private boolean useFieldCacheOnClassTypes = false;
-   private FacetManagerImpl facetManager;
+   private transient FacetManagerImpl facetManager;
 
    /**
     * The number of results for this query. This field gets populated once {@link #queryResultSize},
@@ -156,6 +156,7 @@ public class ISPNQuery implements HSQuery, Serializable {
       return this;
    }
 
+   @Override
    public HSQuery sort(Sort sort) {
       this.sort = sort;
       return this;

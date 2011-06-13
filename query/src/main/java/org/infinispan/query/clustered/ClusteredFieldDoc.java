@@ -42,9 +42,12 @@ public class ClusteredFieldDoc extends FieldDoc {
 
    private final UUID nodeUuid;
 
-   public ClusteredFieldDoc(ScoreDoc scoreDoc, UUID nodeUuid) {
+   int index;
+
+   public ClusteredFieldDoc(ScoreDoc scoreDoc, UUID nodeUuid, int index) {
       super(scoreDoc.doc, scoreDoc.score, ((FieldDoc) scoreDoc).fields);
       this.nodeUuid = nodeUuid;
+      this.index = index;
    }
 
    public UUID getNodeUuid() {
