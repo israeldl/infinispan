@@ -65,9 +65,9 @@ import static org.hibernate.search.util.CollectionHelper.newArrayList;
 import static org.hibernate.search.util.CollectionHelper.newHashMap;
 
 /**
- * Default implementation of the {@link FacetManager} implementation.
+ * It's a copy from Hibernate Search just to be able to use ISPNQuery instead HSQueryImpl
  *
- * @author Hardy Ferentschik
+ * @author Israel Lacerra
  */
 public class FacetManagerImpl implements FacetManager {
       /**
